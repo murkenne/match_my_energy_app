@@ -1,0 +1,202 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400&display=swap');
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Cosmic Theme Colors */
+    --color-background: linear-gradient(135deg, #FF69B4 0%, #8B5CF6 50%, #1E1B4B 100%); /* gradient background from pink to purple/dark blue */
+    --color-foreground: #FFFFFF; /* white text */
+    --color-border: rgba(255, 255, 255, 0.2); /* semi-transparent white borders */
+    --color-input: rgba(30, 27, 75, 0.8); /* dark navy with transparency */
+    --color-ring: #40E0D0; /* cyan ring */
+    
+    /* Card Colors */
+    --color-card: rgba(30, 27, 75, 0.9); /* dark navy card background */
+    --color-card-foreground: #FFFFFF; /* white text on cards */
+    
+    /* Popover Colors */
+    --color-popover: rgba(30, 27, 75, 0.95); /* dark navy popover */
+    --color-popover-foreground: #FFFFFF; /* white text */
+    
+    /* Muted Colors */
+    --color-muted: rgba(255, 255, 255, 0.1); /* subtle white overlay */
+    --color-muted-foreground: rgba(255, 255, 255, 0.7); /* muted white text */
+    
+    /* Primary Colors */
+    --color-primary: #1E90FF; /* blue accent for buttons */
+    --color-primary-foreground: #FFFFFF; /* white text */
+    
+    /* Secondary Colors */
+    --color-secondary: #8B5CF6; /* purple accent */
+    --color-secondary-foreground: #FFFFFF; /* white text */
+    
+    /* Destructive Colors */
+    --color-destructive: #FF6B6B; /* coral red for errors */
+    --color-destructive-foreground: #FFFFFF; /* white text */
+    
+    /* Accent Colors */
+    --color-accent: #FFA500; /* orange accent for headings and icons */
+    --color-accent-foreground: #1E1B4B; /* dark text on orange */
+    
+    /* Success Colors */
+    --color-success: #10B981; /* emerald green */
+    --color-success-foreground: #FFFFFF; /* white text */
+    
+    /* Warning Colors */
+    --color-warning: #F59E0B; /* golden warning */
+    --color-warning-foreground: #1E1B4B; /* dark text */
+    
+    /* Error Colors */
+    --color-error: #FF6B6B; /* coral red */
+    --color-error-foreground: #FFFFFF; /* white text */
+    
+    /* Cosmic Specific Colors */
+    --color-zodiac-gold: #FFD700; /* gold for zodiac symbols */
+    --color-star-accent: #FFF8DC; /* cream white for stars */
+    --color-cosmic-purple: #8B5CF6; /* main purple accent */
+    --color-cosmic-pink: #FF69B4; /* bright pink */
+    --color-cosmic-navy: #1E1B4B; /* deep navy blue */
+    --color-cosmic-orange: #FFA500; /* orange gradient color */
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  
+  body {
+    background: linear-gradient(135deg, #FF69B4 0%, #8B5CF6 50%, #1E1B4B 100%);
+    background-attachment: fixed;
+    color: white;
+    font-feature-settings: "rlig" 1, "calt" 1;
+    min-height: 100vh;
+  }
+  
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Inter', sans-serif;
+  }
+  
+  body, p, span, div, label, input, textarea, select {
+    font-family: 'Inter', sans-serif;
+  }
+  
+  code, pre, .font-mono {
+    font-family: 'JetBrains Mono', monospace;
+  }
+}
+
+@layer utilities {
+  .text-shadow-sm {
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+  }
+  
+  .shadow-soft {
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  }
+  
+  .shadow-soft-hover {
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4);
+  }
+  
+  .transition-smooth {
+    transition: all 300ms ease-out;
+  }
+  
+  .pulse-gentle {
+    animation: pulse-gentle 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+  
+  @keyframes pulse-gentle {
+    0%, 100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.7;
+    }
+  }
+  
+  .scale-gentle {
+    animation: scale-gentle 300ms ease-out;
+  }
+  
+  @keyframes scale-gentle {
+    0% {
+      transform: scale(1);
+    }
+    50% {
+      transform: scale(1.05);
+    }
+    100% {
+      transform: scale(1);
+    }
+  }
+  
+  .cosmic-gradient {
+    background: linear-gradient(135deg, #FF69B4 0%, #8B5CF6 50%, #1E1B4B 100%);
+  }
+  
+  .cosmic-card {
+    background: rgba(30, 27, 75, 0.9);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+  }
+  
+  .zodiac-gold {
+    color: #FFD700;
+  }
+  
+  .star-twinkle {
+    animation: star-twinkle 2s ease-in-out infinite alternate;
+  }
+  
+  @keyframes star-twinkle {
+    0% {
+      opacity: 0.7;
+      transform: scale(1);
+    }
+    100% {
+      opacity: 1;
+      transform: scale(1.1);
+    }
+  }
+  
+  .cosmic-button-primary {
+    background: linear-gradient(135deg, #FFA500 0%, #FF69B4 100%);
+    box-shadow: 0 4px 15px rgba(255, 165, 0, 0.4);
+  }
+  
+  .cosmic-button-primary:hover {
+    box-shadow: 0 6px 25px rgba(255, 165, 0, 0.6);
+    transform: translateY(-2px);
+  }
+  
+  .cosmic-input {
+    background: rgba(30, 27, 75, 0.8);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: white;
+  }
+  
+  .cosmic-input:focus {
+    border-color: #FFA500;
+    box-shadow: 0 0 0 2px rgba(255, 165, 0, 0.3);
+  }
+  
+  .cosmic-input::placeholder {
+    color: rgba(255, 255, 255, 0.5);
+  }
+
+  /* Toggle Switch Utilities */
+  .toggle-switch-orange {
+    background: linear-gradient(135deg, #FFA500 0%, #FF69B4 100%);
+    border-color: #FFA500;
+  }
+
+  .toggle-switch-gray {
+    background: #6B7280;
+    border-color: #9CA3AF;
+  }
+}
