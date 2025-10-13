@@ -241,7 +241,7 @@ const LoginPageForExistingMembers = () => {
               <p className="text-white/80 drop-shadow">
                 New to Match My Energy?{' '}
                 <Link
-                  to="/profile-creation-form"
+                  to="/create-profile"
                   className="text-orange-300 hover:text-orange-200 font-medium transition-colors duration-200 drop-shadow"
                 >
                   Create Account

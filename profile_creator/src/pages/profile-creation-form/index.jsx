@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import CosmicBackground from '../../components/CosmicBackground';
 import Button from '../../components/ui/Button';
 import AutoSaveIndicator from '../../components/ui/AutoSaveIndicator';
@@ -16,9 +16,13 @@ import PrivacySettingsSection from './components/PrivacySettingsSection';
 import FormProgressIndicator from './components/FormProgressIndicator';
 import ProfilePreviewModal from './components/ProfilePreviewModal';
 
-const ProfileCreationForm = () => {
+const isEmail = (v) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v || '');
+const isPhone = (v) => /^\+?[\d\s\-\(\)]+$/.test(v || '');
+
+const CompleteCosmicProfile = () => {
   const navigate = useNavigate();
-  
+  const location = useLocation(); // <— used to read the seed from navigate state
+
   // Complete form data state
   const [formData, setFormData] = useState({
     // Personal Information
@@ -27,11 +31,11 @@ const ProfileCreationForm = () => {
     phone: '',
     dateOfBirth: '',
     gender: '',
-    
+
     // Profile Details
     profilePicture: null,
     bio: '',
-    
+
     // Location
     location: {
       city: '',
@@ -39,13 +43,13 @@ const ProfileCreationForm = () => {
       country: '',
       postalCode: ''
     },
-    
+
     // Social Links
     socialLinks: {},
-    
+
     // Interests
     interests: [],
-    
+
     // Privacy Settings
     privacySettings: {
       profileVisible: true,
@@ -62,7 +66,7 @@ const ProfileCreationForm = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
   const [currentSection, setCurrentSection] = useState('personal');
-  
+
   // Auto-save functionality
   const [autoSaveStatus, setAutoSaveStatus] = useState('idle');
   const [lastSaved, setLastSaved] = useState(null);
@@ -82,7 +86,7 @@ const ProfileCreationForm = () => {
   // Auto-save implementation
   const autoSave = useCallback(async () => {
     if (!hasUnsavedChanges) return;
-    
+
     setAutoSaveStatus('saving');
     try {
       // Simulate auto-save to localStorage
@@ -104,18 +108,51 @@ const ProfileCreationForm = () => {
     }
   }, [hasUnsavedChanges, autoSave]);
 
-  // Load saved data on mount
+  // Load saved data + onboarding seed on mount
   useEffect(() => {
-    const savedData = localStorage?.getItem('profile-form-data');
-    if (savedData) {
-      try {
-        const parsedData = JSON.parse(savedData);
-        setFormData(prev => ({ ...prev, ...parsedData }));
-        setLastSaved(new Date());
-      } catch (error) {
-        console.error('Error loading saved data:', error);
+    try {
+      // 1) Start from current defaults
+      let merged = { ...formData };
+
+      // 2) Merge any autosaved data first (highest fidelity)
+      const savedStr = localStorage?.getItem('profile-form-data');
+      if (savedStr) {
+        const saved = JSON.parse(savedStr);
+        merged = { ...merged, ...saved };
       }
+
+      // 3) Pull seed from navigation state or localStorage
+      const seedFromNav = location?.state?.seed;
+      const seedStr = localStorage?.getItem('onboarding-seed');
+      const seed = seedFromNav || (seedStr ? JSON.parse(seedStr) : null);
+
+      if (seed) {
+        // Map: first+last -> fullName
+        const fullName = [seed.firstName, seed.lastName].filter(Boolean).join(' ').trim();
+        if (fullName && !merged.fullName) merged.fullName = fullName;
+
+        // Map: emailOrPhone -> email OR phone
+        if (seed.emailOrPhone) {
+          if (isEmail(seed.emailOrPhone) && !merged.email) {
+            merged.email = seed.emailOrPhone;
+          } else if (isPhone(seed.emailOrPhone) && !merged.phone) {
+            merged.phone = seed.emailOrPhone;
+          }
+        }
+
+        // Map: dateOfBirth
+        if (seed.dateOfBirth && !merged.dateOfBirth) {
+          merged.dateOfBirth = seed.dateOfBirth;
+        }
+      }
+
+      setFormData(merged);
+      setLastSaved(new Date());
+      // do NOT set hasUnsavedChanges — this is just a prefill
+    } catch (error) {
+      console.error('Error loading saved/seed data:', error);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Generic field change handler
@@ -136,10 +173,10 @@ const ProfileCreationForm = () => {
         [field]: value
       }));
     }
-    
+
     setHasUnsavedChanges(true);
     setAutoSaveStatus('idle');
-    
+
     // Clear field error
     if (errors?.[field]) {
       setErrors(prev => {
@@ -169,7 +206,7 @@ const ProfileCreationForm = () => {
   const calculateCompletionPercentage = () => {
     let completed = 0;
     const totalSections = sections?.length;
-    
+
     // Personal Info
     if (formData?.fullName && formData?.email && formData?.dateOfBirth) completed++;
     // Profile Picture
@@ -184,7 +221,7 @@ const ProfileCreationForm = () => {
     if (formData?.location?.city || formData?.location?.country) completed++;
     // Privacy (always considered complete as it has defaults)
     completed++;
-    
+
     return Math.round((completed / totalSections) * 100);
   };
 
@@ -212,7 +249,7 @@ const ProfileCreationForm = () => {
 
     if (!formData?.email?.trim()) {
       newErrors.email = 'Email is required';
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/?.test(formData?.email)) {
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData?.email)) {
       newErrors.email = 'Please enter a valid email address';
     }
 
@@ -228,7 +265,7 @@ const ProfileCreationForm = () => {
     }
 
     // Optional phone validation
-    if (formData?.phone && !/^\+?[\d\s\-\(\)]+$/?.test(formData?.phone)) {
+    if (formData?.phone && !/^\+?[\d\s\-\(\)]+$/.test(formData?.phone)) {
       newErrors.phone = 'Please enter a valid phone number';
     }
 
@@ -241,29 +278,105 @@ const ProfileCreationForm = () => {
     return Object.keys(newErrors)?.length === 0;
   };
 
+  // --- helpers to persist profile for the viewer ---
+  const fileToDataURL = (file) =>
+    new Promise((resolve) => {
+      if (!file) return resolve(null);
+      if (typeof file === "string") return resolve(file); // already a URL/DataURL
+      const reader = new FileReader();
+      reader.onload = (e) => resolve(e.target.result);
+      reader.readAsDataURL(file);
+    });
+
+  const saveProfileForViewer = async (data) => {
+    // normalize into the shape your viewer expects
+    const pictureDataURL = await fileToDataURL(data?.profilePicture);
+
+    const personalInfo = {
+      fullName: data?.fullName || "",
+      email: data?.email || "",
+      phone: data?.phone || "",
+      dateOfBirth: data?.dateOfBirth || "",
+      gender: data?.gender || "",
+    };
+
+    const birthInfo = {
+      birthdate: data?.dateOfBirth || "",
+      birthTime: "",                // you can wire this later if you collect it
+      birthLocation: "",            // you can wire this later if you collect it
+    };
+
+    const location = {
+      city: data?.location?.city || "",
+      state: data?.location?.state || "",
+      country: data?.location?.country || "",
+    };
+
+    const userProfile = {
+      id: personalInfo.email || `user_${Date.now()}`,
+      fullName: personalInfo.fullName || "Your Name",
+      bio: data?.bio || "",
+      profilePicture: pictureDataURL,
+      location,
+      birthInfo,
+      astrology: data?.astrology || { sunSign: "Unknown", moonSign: "Unknown", risingSign: "Unknown" },
+      interests: Array.isArray(data?.interests) ? data.interests : [],
+      privacySettings: {
+        showBirthdate: !!birthInfo.birthdate,
+        showBirthTime: !!birthInfo.birthTime,
+        showBirthLocation: !!birthInfo.birthLocation,
+        showAstrology: true,
+        ...(data?.privacySettings || {}),
+      },
+      isOnline: true,
+      lastSeen: "Now",
+    };
+
+    // keys your viewer already loads
+    localStorage.setItem("userProfile", JSON.stringify(userProfile));
+    localStorage.setItem("personalInfo", JSON.stringify(personalInfo));
+    localStorage.setItem("userInterests", JSON.stringify(userProfile.interests));
+    localStorage.setItem("userBio", userProfile.bio || "");
+    if (pictureDataURL) localStorage.setItem("profilePicture", pictureDataURL);
+    localStorage.setItem("birthInfo", JSON.stringify(birthInfo));
+    localStorage.setItem("userLocation", JSON.stringify(location));
+    localStorage.setItem("astrologyInfo", JSON.stringify(userProfile.astrology));
+
+    // also set these so other pages can find "the logged in me"
+    localStorage.setItem("currentUser", JSON.stringify(userProfile));
+    if (personalInfo.email) localStorage.setItem("authEmail", personalInfo.email);
+    localStorage.setItem("isAuthenticated", "true");
+  };
+
+
   // Form submission
   const handleSubmit = async (e) => {
     e?.preventDefault();
-    
+
     if (!validateForm()) {
       return;
     }
 
     setIsSubmitting(true);
-    
+
     try {
       // Save final data
       await autoSave();
-      
+
       // Simulate API submission
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      // Clear saved data on successful submission
-      localStorage?.removeItem('profile-form-data');
-      
-      // Navigate to profile
-      navigate('/my-cosmic-profile');
-      
+      // Simulate API
+      await new Promise((r) => setTimeout(r, 600));
+
+      // Persist for the viewer and auth context
+      await saveProfileForViewer(formData);
+
+      // Clear temp autosave/seed
+      localStorage.removeItem('profile-form-data');
+      localStorage.removeItem('onboarding-seed');
+
+      // Go straight to your card
+      navigate('/profile-viewer');
+
     } catch (error) {
       setErrors({ submit: 'Failed to create profile. Please try again.' });
     } finally {
@@ -277,7 +390,7 @@ const ProfileCreationForm = () => {
     if (!section) return null;
 
     const SectionComponent = section?.component;
-    
+
     const commonProps = {
       formData,
       errors,
@@ -365,7 +478,7 @@ const ProfileCreationForm = () => {
                 <p className="text-lg text-gray-200 opacity-90 mb-4">
                   Create a comprehensive profile that showcases who you are
                 </p>
-                
+
                 {/* Already have an account link */}
                 <div className="mb-4">
                   <p className="text-gray-300 text-sm">
@@ -379,10 +492,10 @@ const ProfileCreationForm = () => {
                     </button>
                   </p>
                 </div>
-                
+
                 {/* Progress Bar */}
                 <div className="max-w-md mx-auto bg-white/10 rounded-full h-2 mb-2">
-                  <div 
+                  <div
                     className="bg-gradient-to-r from-orange-500 to-pink-500 h-2 rounded-full transition-all duration-500 ease-out"
                     style={{ width: `${completionPercentage}%` }}
                   />
@@ -398,23 +511,23 @@ const ProfileCreationForm = () => {
                   {sections?.map((section) => {
                     const isCompleted = completedSections?.includes(section?.key);
                     const isCurrent = currentSection === section?.key;
-                    
+
                     return (
                       <button
                         key={section?.key}
                         onClick={() => setCurrentSection(section?.key)}
                         className={`
                           flex items-center space-x-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200
-                          ${isCurrent 
-                            ? 'bg-gradient-to-r from-orange-500 to-pink-500 text-white shadow-lg' 
+                          ${isCurrent
+                            ? 'bg-gradient-to-r from-orange-500 to-pink-500 text-white shadow-lg'
                             : isCompleted
-                            ? 'bg-green-500/20 text-green-300 border border-green-500/30' :'bg-white/10 hover:bg-white/20 text-gray-300 hover:text-white border border-white/20'
+                              ? 'bg-green-500/20 text-green-300 border border-green-500/30' : 'bg-white/10 hover:bg-white/20 text-gray-300 hover:text-white border border-white/20'
                           }
                         `}
                       >
-                        <Icon 
-                          name={isCompleted ? 'Check' : section?.icon} 
-                          size={16} 
+                        <Icon
+                          name={isCompleted ? 'Check' : section?.icon}
+                          size={16}
                         />
                         <span>{section?.label}</span>
                       </button>
@@ -448,11 +561,11 @@ const ProfileCreationForm = () => {
                     <Button
                       type="button"
                       variant="outline"
-                      onClick={() => setShowPreview(true)}
+                      onClick={async () => { await saveProfileForViewer(formData); navigate('/profile-viewer'); }}
                       className="px-6 py-3"
                     >
                       <Icon name="Eye" size={16} className="mr-2" />
-                      Preview Profile
+                      Save & View Card
                     </Button>
 
                     {sections?.findIndex(s => s?.key === currentSection) === sections?.length - 1 ? (
@@ -489,7 +602,7 @@ const ProfileCreationForm = () => {
 
                   <button
                     type="button"
-                    onClick={() => navigate('/my-cosmic-profile')}
+                    onClick={() => navigate('/dating-preferences-questionnaire')}
                     className="w-full text-gray-400 hover:text-white transition-colors py-2"
                   >
                     Skip and continue later
@@ -516,7 +629,7 @@ const ProfileCreationForm = () => {
                 totalSections={sections?.length}
                 className="mb-6"
               />
-              
+
               {/* Quick Tips */}
               <div className="bg-white/5 backdrop-blur-sm rounded-lg p-6 shadow-lg border border-white/10">
                 <div className="flex items-center space-x-3 mb-4">
@@ -558,9 +671,9 @@ const ProfileCreationForm = () => {
           onClose={() => setShowPreview(false)}
           formData={formData}
         />
-      </div>
-    </CosmicBackground>
+      </div >
+    </CosmicBackground >
   );
 };
 
-export default ProfileCreationForm;
+export default CompleteCosmicProfile;

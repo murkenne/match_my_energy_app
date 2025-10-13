@@ -11,7 +11,7 @@ const AgeVerificationGate = () => {
 
   const handleVerifyAge = () => {
     // User confirms they are 18 or older - redirect to profile creation
-    navigate('/profile-creation-form');
+    navigate('/create-profile');
   };
 
   const handleUnderAge = () => {
